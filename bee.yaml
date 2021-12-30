@@ -12,5 +12,5 @@ spec:
   tolerations:
   - effect: Noschedule
     key: spray
-    operator: In
+    operator: Equal
     value: mortein
