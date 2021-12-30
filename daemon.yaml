@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Replicaset
+metadata:
+  name: monitoring-daemon
+spec:
+  selector:
+    matchLabels:
+      app: monitoring-agent
+  template:
+    metadata:
+      labels:
+        app: monitroing-agent
+    spec:
+      containers;
+      - name: monitoring-agent
+        image: monitoring-agent
