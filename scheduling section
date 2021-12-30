@@ -1,0 +1,231 @@
+scheduling section:
+-----------------------
+Manual scheduling:
+-----------
+how schedling works
+--------
+apiVersion: v1
+kind: pod
+metadata:
+  name: nginx
+  labels:
+    name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+      - containerPort: 8080
+  nodeName: node02
+
+---------
+apiversion: v1
+kind: pod
+metadata:
+  name: nginx
+spec: 
+  nodeName: master
+  containers:
+  -  image: nginx
+     name: nginx
+--------------------------------
+Labels and Selectors:
+-----------------
+Labels:
+
+apiversion: v1
+kind: pod
+metadata:
+  name: simple-webapp
+  labels:
+      app: App1
+      function: Front-end
+
+spec:
+  containers:
+  -  name: simple-webapp
+     image: simple-webapp
+     ports:
+       - containerPort: 8080
+--> kubectl get pods --selector app=App1
+--> kubectl get pods --show-labels
+--> kubectl get pods -l env=dev 
+--> kubeclt get pods -l env=dev --no-headers | wc  -l
+--> kubectl pods -l bu=finance --no-headers | wc -l
+--> kubectl get pods env=prod --no-headers
+--> kubectl get all -l env=prod --no-headers
+--> kubectl get all -l env=prod --no-headers | wc -l
+--> kubectl get pods -l env=prod, bu=fiance
+--> kubectl get pods -l env=prod,bu=finance,tier=frontend
+--> kubectl create -f replicaset-definition-1.yaml
+---------------------
+Taints And Toleration:
+----------
+--> kubectl taint nodes node-name key=value:taint-effect
+--> kubectl taint nodes node1 app=blue:noschedlue
+
+Tolerations: pods
+
+apiVersion:
+kind: pod
+metadata:
+ name: myapp-pod
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx
+  tolerations:
+  - key: app
+    operator:"Equal"
+    value: blue
+    effect: NoSchedule
+--> kubectl desribe node kubemaster | grep taint
+--> kubectl get nodes
+--> kubectl describe node node01
+--> kubectl describe node node01 | grep -i taint
+--> kubectl taint node node01 spray=mortein:Noschedule
+--> kubectl run mosquito --image=nginx --restart=Never
+--> kubectl get pod mosquito
+--> kubectl run bee --image=nginx --restart=never --dry-run -o yaml > bee.yaml
+--> kubectl explain pod --recursive | less
+--> kubectl explain pod --recursive | -A5 tolerations
+
+apiVersion: v1
+kind: pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: bee
+  name: bee
+spec:
+  containers:
+  - image: nginx
+    name: bee
+  tolerations:
+  - effect: Noschedule
+    key: spray
+    operator: In
+    value: mortein
+--> kubectl apply -f bee.yaml
+--> kubectl get pods
+--> kubectl get pods -o wide
+--> kubectl describe nodes master | grep -i taint
+--> kubectl taint node master node-role.kubernetes.io/master:Noschedule
+----------------
+Node Selectors:
+---
+Node selectors
+---
+apiVersion:
+kind: pod
+metadata:
+ name: myapp-pod
+spec:
+  containers:
+  - name: data-processor
+    image: data-processor
+  
+  nodeSelector:
+    size: Large
+
+----
+Label Nodes:
+--
+--> kubectl label nodes <node-name> <label-key>=<label-value>
+--> kubectl label nodes node-1 size=Large
+-------
+Node Selector:
+apiVersion:
+kind: pod
+metadata:
+ name: myapp-pod
+spec:
+  containers:
+  - name: data-processor
+    image: data-processor
+ 
+  nodeSelector:
+    size: Large
+--> kubectl create -f pod-definition.yml
+--------
+Node Affinity
+---------------
+Node Affinity types:
+Available:
+requiredDuringSchedulingIgnoredDuringExecution
+preferredDuringSchedulingIgnoredDuringExecution
+
+Planned:
+requiredDuringSchedulingRequiredDuringExecution
+------
+Solution: Node affinity
+--> kubectl get nodes node01 --show-labels
+--> kubectl label nodes node01 color=blue
+--> kubectl create deployment blue --image=nginx
+--> kubectl scale deployment blue --replicas=6
+--> kubectl get pods -o wide
+--> kubectl get deployments.app blue -o yaml > blue.yaml
+--> kubectl delete deployments.apps blue
+--> kubectl apply -f blue.yaml
+--> kubectl get pods
+--> kubectl create deployment red --image=nginx --dry-run -o yaml > red.yaml
+--> kubectl get pods -o wide| grep red
+------
+node Affinity vs Taints and tolerations:
+---------------------------------------
+Resource requirements and limits:
+---------------------
+Resources Requests:
+
+--> CPU-0.5
+--> MEM: 256 Mi
+--> Disk: 
+
+apiVersion: v1
+kind: pod
+metadata:
+  name: simple-webapp-color
+  labels:
+  name: simple-webapp-color
+spec:  
+  containers:
+  - name: simple-webapp-color
+    image: simple-webapp-color
+    ports:
+      - containerPort: 8080
+    resources:
+      requests
+        memory: "IGi"
+        cpu: 1
+
+--> Resources: CPU
+--> 1 AWS vCPU
+--> 1 GCP Core
+--> 1 Azure Core
+--> 1 hyperthread
+
+Resources: Memory
+
+----------------------
+Resources limits:
+---------------
+apiVersion: v1
+kind: pod
+metadata:
+  name: simple-webapp-color
+  labels: 
+    name: simple-webapp-color
+spec:
+  containers:
+  - name: simple-webapp-color
+    image: simple-webapp-color
+    ports:
+      - containerPort: 8080
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: 1
+      limits:
+        memory: "2Gi"
+        cpu: 2
+
