@@ -228,4 +228,140 @@ spec:
       limits:
         memory: "2Gi"
         cpu: 2
+----------------------------------
+Note on default resource requirements and limits:
+
+"When a pod is created the containers are assigned a default CPU request of .5 and memory of 256Mi". For the POD to pick up those defaults you must have first set those as default values for request and limit by creating a LimitRange in that namespace.
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-limit-range
+spec:
+  limits:
+  - default:
+      memory: 512Mi
+    defaultRequest:
+      memory: 256Mi
+    type: Container
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cpu-limit-range
+spec:
+  limits:
+  - default:
+      cpu: 1
+    defaultRequest:
+      cpu: 0.5
+    type: Container
+------------------------------------
+Solution: Resources limits:
+-----------
+Daemon Set:
+-------------------
+Daemons set is a like replicaSet
+---
+Daemon Sets -useCase -Kube-proxy
+----
+DaemonSet Definition
+apiVersion: apps/v1
+kind: Replicaset
+metadata:
+  name: monitoring-daemon
+spec:
+  selector:
+    matchLabels:
+      app: monitoring-agent
+  template:
+    metadata:
+      labels:
+        app: monitroing-agent
+    spec:
+      containers;
+      - name: monitoring-agent
+        image: monitoring-agent
+
+view Daemonsets:
+--> kubectl get daemonsets
+--> kubectl describe daemonsets monitoring-daemon
+--> kubectl get ds --all-namespaces
+--> kubectl get nodes
+--> kubectl -n kube-system get pods | grep proxy
+--> kubectl -n kube-system get pods -o wide | grep proxy
+--> kubectl -n kube-system decribe ds weave-net | grep -i image
+--> kubectl create deployment --image=k8.gcr.io/fluentd-elasticsearch:1.20 --dry-run -o yaml > elastic.yaml
+----------------------------
+Static Pods:
+-------
+--> kubelet.service
+--> kubconfig.yaml
+
+Static pods vs Daemonsets:
+
+Static pods:
+--> created by the kubelet
+--> Deploy control plane componenet as statis pods
+
+Daemonsets:
+--> Created by kube-API server (DaemonSet Controller)
+--> Deploy Monitoring Agents, logging Agents on nodes
+
+Solution: Static pods
+--> kubectl get pods --all-namespaces
+--> kubectl get pods --all-namespaces | grep "\-master"
+--> kubectl get pods --all-namespaces -o wide | grep "\-master"
+--> ps -ef | grep kubelet
+--> grep -i static /var/lib/kubelet/config.yaml
+--> grep -i image kube-apiserver.yaml
+--> kubectl run statis-busybox --image=busybox --command sleep 1000 --restart=never --dry-run -o yaml > static-busybox.yaml
+--> ps -ef | grep kubelet | grep "\--config"
+--> grep -i static /var/lib/kubelet/config.yaml
+
+-----------------------------------
+Multiple Scheduler:
+---------------------
+deploy Additional Scheduler -kubeadm
+/etc/kubernetes/manifests/kube-scheduler.yaml
+
+apiVersion: v1
+kind: pod
+metadata:
+  name: kube-scheduler
+  namespace: kube-system
+spec:
+  containers:
+  - command:
+    - kube-scheduler
+    - --address=127.0.0.1
+    - --kubeconfig=/etc/kubernetes/scheduler.conf
+    - --leader-elect=true
+    - --scheduler-name=my-custom-scheduler
+    - --lock-bkect-name=my-custom-scheduler
+image: k8s.gcr.io/kube-scheduler=amd64:v1.11.3
+    name: kube-scheduler
+-----------
+apiversion: v1
+kind: pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+
+  schedulerName: my-custom-scheduler
+
+--> kubectl get events
+
+View scheduler logs:
+
+--> kubectl logs my-custom-scheduler --name-space=kube-system
+--> kubectl -n kube-system desribe pod kube-scheduler-master | grep image
+
+
+
+
+
 
