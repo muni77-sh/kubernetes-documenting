@@ -1,0 +1,11 @@
+apiversion: v1
+kind: pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+
+  schedulerName: my-custom-scheduler
+
