@@ -1,0 +1,34 @@
+monitor Cluster components:
+1. Heapster--> deprecated
+2. Metrics server
+
+others --> git clone https://github.com/kubernetes-incubator/metrics-serve
+
+kubectl top node: cpu and memory consumption
+kubectl top pod: performance metrics
+watch "kubectl top node"
+
+Managing Application Logs:
+--> docker run kodekloud/event-simulator
+--> docker run -d kodekloud/event-simulator
+--> docker logs -f ecf--> f--> live logs
+
+event-simulator.yaml
+apiversion: v1
+kind: pod
+metadata:
+  name: event-simulator-pod
+spec:
+  containers:
+  - name: event-simulator
+    image: kodekloud/event-simulator
+  - name: image-processor
+    image: some-image-processor
+
+
+--> kubectl create -f event-simulator.yaml
+--> kubectl logs -f event-simulator.yaml
+--> kubectl logs -f event-simulator-pod event-simulator
+--> kubectl logs webapp-1 | grep USERS
+--> kubectl logs webapp-2 -c
+--> kubectl logs webapp-2 -c simple-webapp
