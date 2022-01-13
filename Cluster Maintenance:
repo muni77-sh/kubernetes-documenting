@@ -1,0 +1,105 @@
+Node draining is the mechanism that allows users to gracefuuly move all containers from one node to the other ones.
+
+--> kubectl drain node-1
+
+Uncordon: If you leave the node in the cluster during the maintenance operation, you need to run. kubectl uncorden <node name> afterwards to tell kubernetes that it can resume scheduling new pods onto the node.
+
+--> kubectl uncorden node-1
+
+
+cordon: the existing node pool: this operation makes the nodes in the existing node pool (default-pool) as unschedule. kubernetes stops scheduling new pods to these nodes once you mark them as unschedulable.
+
+--> kubectl cordon node-2
+--> kubectl drain node01 --ignore-daemonsets
+
+Cluster Upgrade process:
+
+kubeadm -upgrade:
+--> kubeadm upgrade plan
+--> apt-get upgrade -y kubeadm=1.12.0-00
+--> kubeadm upgrade apply v1.12.0
+--> apt-get upgrade -y kubelet=1.12.0-00
+--> systemctl restart kubelet
+--> kubectl drain node-1
+--> apt-get upgrade -y kubeadm=1.12.0-00
+--> apt-get upgrade -y kubelet=1.12.0-00
+--> kubeadm upgrade node config --kubelet-version v1.12.0
+--> systemctl restart kubelet
+
+--> Backup candidates:
+Imperative:
+Resource Configuration:
+To limit the total amount of resources that a namespace can consume.
+--> kubectl create namespace new-space
+--> kubectl create secret
+--> kubectl create configmap
+
+Declarative:
+apiVersion: v1
+kind: pod
+
+metadata:
+ name: myapp-pod
+ labels:
+    app: myapp
+    type: front-end
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx
+-> kubectl apply -f po-definition.yml
+
+Backup -Resource Configs:
+
+kubectl get all --all-namespaces -o yaml > all-deploy-services.yaml
+
+Backup - ETCD:
+--> service kube-apiserver stop
+--> ETCDCTL_API=3 etcdctl \
+--> systemctl daemon-reload
+--> service etcd restart
+--> service kube-apiserver start
+-------------------------------------
+Working with ETCDCTL:
+
+etcdctl is a command line client for etcd.
+
+the ETCD key-value database is deployed as a static pod on the master. The version used is v3.
+
+To make use of etcdctl for tasks such as back up and restore, make sure that you set the ETCDCTL_API to 3.
+
+You can do this by exporting the variable ETCDCTL_API prior to using the etcdctl client. This can be done as follows:
+
+--> export ETCDCTL_API=3
+
+On the Master Node:
+--> export ETCDCTL_API=3
+--> etcdctl version
+
+ if you want to take a snapshot of etcd, use:
+etcdctl snapshot save -h and keep a note of the mandatory global options.
+
+Since our ETCD database is TLS-Enabled, the following options are mandatory:
+
+--cacert -->verify certificates of TLS-enabled secure servers using this CA bundle
+
+--cert --> identify secure client using this TLS certificate file
+
+--endpoints=[127.0.0.1:2379]  -->This is the default as ETCD is running on master node and exposed on localhost 2379.
+
+--key --> identify secure client using this TLS key file
+
+--> etcdctl snapshot restore -h
+----------------
+labs
+--> kubectl get pods -n kube-system
+--> kubectl -n kube-system describe pod etcd-controlplane
+--> ETCDCTL_API=3 etcdctl version
+--> ETCDCTL_API=3 etcdctl --cacert="etc/kubernetes/pki/etcd/ca.crt" --cert="/etc/kubernetes/pki/etcd/server.crt" --key="/etc/kubernetes/pki/etcd/server.key" snapshot save /opt/snapshot-pre-boot.db
+--> ETCDCTL_API=3 etcdctl snapshot save 
+--> kubectl get deployment.apps
+--> kubectl get deployment.apps,svc,pod
+--> ETCDCTL_API=3 etcdctl snapshot restore /opt/snapshot-pre-boot.db --data-dir=/var/lib/etcd-from-backup
+--> ls /var/lib/etcd/
+ls /var/lib/etcd-from-backup
+--> docker ps -a | grep etcd
