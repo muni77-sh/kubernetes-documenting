@@ -425,6 +425,71 @@ Service Acccounts:
 --> kubectl create serviceaccount dashboard-sa
 --> kubectl get serviceaccount
 --> kubect desribe serviceaccount dashboard-sa
+--> kubectl describe secret dashborad-sa-token-kbbdm
+--> kubectl describe pod my-kubernetes-dasboard
+--> kubectl exec -it my-kubernetes-dashboard ls /var/run/secrets/kubernetes.io/serviceaccount
+--> kubectl exec -it my-kubernetes-dashboard cat var/run/secrets/kubernetes.io/serviceaccount/token
+--> kubectl describe pod my-kubernetes-dashboard
+------------------------
+Image Security:
+
+Private Repository:
+--> docker login private-registry.io
+--> docker run private-registry.io/apps/internal-app
+--> docker run private-registry.io/apps/internal-app
+--> kubectl create secret docker-registry regcred \ 
+    --docker-server=
+    --docker-username=
+    --docker-password=
+    --docker-email=
+
+-----------------
+network Policy:
+Ingress and Egress:
+
+Ingress: refers to the right to enter a property, 
+Egress: while egress, to the right to exit a property.
+ex: a driveway provides ingress and egress from roadways to houses and businesses.
+
+ingress-80
+Egress -5000
+
+ingress - 5000
+Egress - 3306
+
+Ingress: 3306
+
+Network Security:
+
+Network policy --> Selectors
+--> allow Ingress
+--> traffic from API
+--> pod on port 3306
+
+Solutions that Support Network policies:
+--> kube-router
+--> calico
+--> Romana
+--> Weave-net
+
+Solutions Do not  Support Network policies:
+Flannel
+
+Developing network policies:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
