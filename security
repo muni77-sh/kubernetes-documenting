@@ -1,0 +1,435 @@
+security primitives:
+Secure Hosts:
+--> password based authentication disabled
+--> SSH key based authentication
+
+Authentication:
+--> Files-Username and Passwords
+--> Files-Username and Tokens
+--> Certificates
+--> External Authentication providers- LDAP
+--> Service Accounts
+
+Authorization:
+--> RBAC Authorization
+--> ABAC Authorization
+--> Node Authorization
+--> Webhook Mode
+
+Authentication:
+Accounts: 
+
+Auth Mechanisms: kube-apiserver
+
+--> Static Password File
+--> Static Token File
+--> Certificates
+--> Identity Services
+
+we can create list of users with Password:
+user-details.csv--for static password file
+
+Authenticate User:
+--> curl -v -k https://master-node-ip:6443/api/v1/pods -u "user:password123"
+--> Static Token File: user-token-details.csv
+--> curl -v -k https://master-node-ip:6443/api/v1/pods --header "Authorization: bearer "token file"
+
+Note:
+--> This is not a recommended authentication mechanism.
+--> Consider volume mount while providing the auth file in a kubeadm setup.
+--> Setup Role Based Authorization for the new Users.
+
+
+Article on Setting up Basic Authentication:
+
+Setup basic authentication on Kubernetes (Deprecated in 1.19)
+
+note: 
+This is not recommended in a production environment. This is only for learning purposes. Also note that this approach is deprecated in Kubernetes version 1.19 and is no longer available in later releases.
+
+Follow the below instructions to configure basic authentication in a kubeadm setup.
+
+Create a file with user details locally at /tmp/users/user-details.csv
+
+# User File Contents
+password123,user1,u0001
+password123,user2,u0002
+password123,user3,u0003
+password123,user4,u0004
+password123,user5,u0005
+
+Edit the kube-apiserver static pod configured by kubeadm to pass in the user details. The file is located at
+/etc/kubernetes/manifests/kube-apiserver.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  containers:
+  - command:
+    - kube-apiserver
+      <content-hidden>
+    image: k8s.gcr.io/kube-apiserver-amd64:v1.11.3
+    name: kube-apiserver
+    volumeMounts:
+    - mountPath: /tmp/users
+      name: usr-details
+      readOnly: true
+  volumes:
+  - hostPath:
+      path: /tmp/users
+      type: DirectoryOrCreate
+    name: usr-details
+
+Modify the kube-apiserver startup options to include the basic-auth file
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  containers:
+  - command:
+    - kube-apiserver
+    - --authorization-mode=Node,RBAC
+      <content-hidden>
+    - --basic-auth-file=/tmp/users/user-details.csv
+
+Create the necessary roles and role bindings for these users:
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: default
+  name: pod-reader
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+ 
+---
+# This role binding allows "jane" to read pods in the "default" namespace.
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-pods
+  namespace: default
+subjects:
+- kind: User
+  name: user1 # Name is case sensitive
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role #this must be Role or ClusterRole
+  name: pod-reader # this must match the name of the Role or ClusterRole you wish to bind to
+  apiGroup: rbac.authorization.k8s.io
+
+Once created, you may authenticate into the kube-api server using the users credentials
+
+curl -v -k https://localhost:6443/api/v1/pods -u "user1:password123"
+------------------
+TLS Introduction:
+
+what is TLS?
+Ans: You can secure an application running on kubernetes by creating a secret that contains a TLS (Transport Layer Securtity) private key and certiificate. Currently, ingress support a single TLS port, 443, and assumes TLS termination.
+The TLS secret must contain keys named tls.
+
+TLS Certificate (Pre-Req):
+Symmetric Encryption:
+Symmetric encryption uses one key for both encryption and decryption.
+
+Asymmetric Encryption:
+the Asymmetric encryption uses public key for encryption and a private key for decryption.
+
+Asymmetric Encryption: -SSH
+--> ssh-keygen
+--> id_rsa-for private key
+--> id_rsa.pub public key
+cat ~/.ssh/authorized_keys
+--> ssh -i id_rsa user1@server1
+--> openssl genrsa -out my-bank.key 1024--> to generate key-pairs for public and private
+--> openssl rsa -in my-bank.key -pubout > mybank.pem
+--> openssl req -new -key my-bank.key -out my-bank.csr -subj "/C=US/ST=CA/O=Myorg, INc./CN=mydomian.com"
+
+Certificate (public key)
+*.crt *.pem
+
+--> server.crt
+--> server.pem
+--> client.crt
+--> client.pem
+public key is like -lock
+private key is like -> key
+
+private key
+*key *-key.pem
+server.key
+server-key.pem
+client.key
+client-key.pem
+--------------------------------------------------
+TLS in kubernetes:
+--> Root Certificates (symantec)
+--> Client Certificates 
+--> server Certificates -public and private keys
+
+Server Certificate for servers:
+Kube-Api server--> apiserver.crt--> apiserver.key
+ETCD server--> etcdserver.crt--> etcdserver.key
+Kubelet server--> kubelet.crt --> kubelet.key
+
+Client Certificates for Clients:
+To access for Kube-api server
+
+admin.crt --> admin.key --> admin --> kubectl REST API --> Kube-api server
+scheduler.crt --> scheduler.key --> kube-scheduler --> kube-apiserver
+Controller-manager.crt --> controller-manager.key --> kube-controller-manager --> kube-apiserver
+kube-proxy.crt -> kube-proxy.key --> kube-proxy --> kube-apiserver
+---------------------------
+Certificate Creation:
+
+Certificate authority(CA):
+1.Generate keys --. ca.key --> openssl genrsa -out ca.key 2048
+2.Certificate Signing Request --> ca.csr --> openssl req -new ca.key -subj "/CN=kubernetes-ca" -out ca.csr
+3.Sign Certificates --> ca.crt --> openssl x509 -req -in ca.csr -signkey ca.key -out ca.crt
+-------------------
+Admin User:
+1.Generate keys --. admin.key --> openssl genrsa -out admin.key 2048
+2.Certificate Signing Request --> admin.csr --> openssl req -new -key admin.key -subj "/CN=kube-admin" -out admin.csr
+3.Sign Certificates --> admin.crt --> openssl x509 -req -in admin.csr -CA ca.crt -CAkey ca.key -out admin.crt
+---------------
+Admin:
+--> curl https://kube-apiserver:6443/api/v1/pods \
+--key admin.key --cert admin.crt
+--cacert ca.crt
+--------------------
+Sever Side CA:
+ETCD --> etcdserver.crt etcdserver.key
+etcdpeer1.crt--> etcdpeer1.key
+--> cat etcd.yaml
+Kube API server --> apiserver.crt --> apiserver.key
+--> openssl genrsa -out apiserver.key 2048
+--> openssl req -new -key apiserver.key -subj \ "/CN=kube-apiserver" -OUT apiserver.csr
+--> openssl.cnf
+--> ExecStart=/usr/local/bin/kube-apiserver \\
+-------------------
+View Certificate Details:
+--> cat /etc/systemd/system/kube-apiserver.service--the Hard way
+--> cat /etc/kubernetes/manifests/kube-apiserver.yaml
+--> /etc/kubernetes/pki/apiserver.crt
+--> openssl x509 -in /etc/kuberntes/pki/apiserver.crt -text -noout
+
+Inspect Service logs:
+--> journalctl -u etcd.service -1
+--> view logs --> kubectl logs etcd-master
+-------------------------
+Certiifcate API:
+first user created the key
+--> openssl genrsa -out jane.key 2048
+genertating signing req and send req to administrator
+--> openssl req -new -key jane.key -subj "/CN=jane" -out jane.csr
+by encoding --> cat jane.csr | base64
+--> kubectl get csr
+--> kubectl sertificate approve jane
+--> kubectl get csr jane -o yaml
+--> echo "LS0..Qo=" | base64 --decode
+--> controller manager--> csr-approving --> csr-signing
+--> cat /etc/kubernetes/manifests/kube-controller-manager.yaml
+-----------
+KubeConfig:
+--------
+--> curl https://my-kube-playground:6443/API/V1/PODS \
+--key admin.key
+--cert admin.crt
+--cacert ca.crt
+
+KubeConfig File:
+1.Cluster
+2.Contexts
+3.Users
+
+apiVersion: v1
+kind: config
+
+cluster:
+
+- name: my-kube-playground
+  cluster:
+    certificate-authority: ca.crt
+    server: https://my-kube-playground:6443
+
+contexts:
+
+- name: my-kube-admin0my-kube-playground
+  context:
+    cluster: my-kube-playground
+    user:
+
+users:
+- name: my-kube-admin
+  user:
+    client-certificate: admin.crt
+    client-key: admin.key
+
+apiVersion: v1
+kind: config
+
+cluster:
+- name: my-kube-playground
+- name: development
+- name: production
+- name: google
+
+contexts:
+- name: my-kube-admin@my-kube-playground
+- name: dev-user@google
+- name: prod-user@production
+
+users:
+- name: my-kube-admin
+- name: admin
+- name: dev-user
+- name: prod-user
+
+--> kubectl config
+--> kubectl config view --kubeconfig=my-custom-config
+--> kubectl config use-context prod-user@production
+
+NameSpaces:
+
+apiVersion: v1
+kind: config
+
+clusters:
+- name: production
+  cluster:
+    certificate-authority: ca.crt
+    server: https://ip:6443
+
+contexts:
+- name: admin@production
+  context:
+    cluster: production
+    user: admin
+    namespace: finance
+
+users:
+- name: admin
+  user:
+    client-certificate: admin.crt
+    client-key: admin.key
+
+Certificate in kubeConfig:
+apiVersion: v1
+kind: Config
+
+clusters:
+- name: production
+  cluster:
+    certificate-authority: /etc/kubernetes/pki/ca.crt
+    certificate-authority-data: (cat ca.crt | base64
+
+decode: echo "LSo..bnJ" | base6
+----------------------
+API Groups: 
+--> curl https://kube-master:6443/version
+--> curl https://kube-master:6443/api/v1/pods
+--------------------------------------------------
+Authorization:
+---
+authorization Mechanisms:
+1. NOde
+2. ABAC
+3. RBAC
+4. Webhook
+
+1. Node Authorizer:
+user --> kube API <-- kubelet
+
+2. ABAC: 
+dev-user  --> can view pods
+              can create pods
+              can delete pods
+
+3. RBAC:
+
+4. Webhook:
+
+Authorizatin Mode:
+user --> Node --> RBAC --> Webhook
+---------------
+RBAC:(Role Based Access control)
+--> can view pods
+--> can create pods
+--> can delete pods
+--> can create configMaps
+developer
+
+developer-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: role
+metadata:
+   name: developer
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list', "aet", "create", "update", "delete"
+- apiGroups: [""]
+  resources: ["configMAp"]
+  verbs: ["create"]
+
+devuser-developer-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: roleBinding
+metadata:
+  name: devuser-developer-binding
+subjects:
+- kind: User
+  name: dev-user
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+   kind: Role
+   name: developer
+   apiGroup: rbac.authorizaton.k8s.io
+
+--> kubectl create -f devuser-developer-binding.yaml
+
+View RBAC
+--> kubectl get roles
+--> kubectl get rolebindings
+--> kubectl describe role developer
+---------
+View RBAC:
+--> kubectl describe rolebinding devuser-developer-binding
+-----
+Check Access
+--> kubectl auth can-i create deployment
+--> kubectl auth can-i delete nodes
+--> kubectl auth can-i create deployment --as dev-user
+--> kubectl auth can-i create pods --as dev-user
+
+Cluster Roles and Role Bindings:
+Roles:
+Clusterroles:
+-> cluster Admin
+-> storage ADmin
+--------------------------------
+Service Acccounts:
+1. User Accounts(admin. developer)
+2. Service Accounts (promtheus, jenkins)
+
+--> kubectl create serviceaccount dashboard-sa
+--> kubectl get serviceaccount
+--> kubect desribe serviceaccount dashboard-sa
+
+
+
+
+
+
+
+
