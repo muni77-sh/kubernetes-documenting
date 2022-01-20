@@ -1,0 +1,31 @@
+Networking 
+-------------
+Linux Networking basics
+--> Switching and Routing
+    1. Switching
+    2. Routing
+    3. Default Gateway
+  DNS
+    1. DNS Configurations on linux
+    2. CoreDNS introduction
+    3. Network Namespaces
+    4. Docker Networking
+
+Switching: 
+
+etho A --------->  etho B
+ip link            ip link
+ip addr add 192.168.1.10/24 dev etho -> A
+ip addr add 192.168.1.10/24 dev etho -> B
+ip route add 192.168.2.0/24 via 192.168.1.1
+ip route add default viq 192.168.2.1
+
+A--> 192.168.2.5 
+B--> 192.168.1.6 and 192.168.2.6
+C --> 192.168.2.5
+
+ping 192.168.2.5--network is unreachable
+
+--> ip route add 192.168.2.0/24 via 192.168.1.6
+--> ip route add 192.168.1.0/24 via 192.168.2.6
+
