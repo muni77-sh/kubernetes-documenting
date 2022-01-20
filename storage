@@ -1,0 +1,196 @@
+Docker Storage:
+1. Storage Drivers
+2. Volume Drivers
+
+how docker stores data in File system
+/var/lib/docker
+--> aufs
+--> containers
+--> image
+--> volumes
+
+layered architecture:
+Dockerfile
+FROM ubuntu
+
+RUN apt-get update && apt-get -y install python
+
+RUN pip install flask flask-mysql
+
+COPY . /opt/source-code
+
+ENTRYPOINT FLASK_APP=/opt/source-code/app.py flask
+run
+
+--> Docker build Dockerfile -t bhasker/my-custom-app
+-----------------------------------------------------
+Docker Volumes:
+--> docker volume create data_volume
+--> /var/lib/docker
+--> /var/lib/docker/volumes
+--> data_volume
+we can mount this volume inside the docker container
+--> docker run -v data_volume:/var/lib/mysql mysql
+--> docker run \
+--> mount type=bind,source=/data/mysql,target=/var/lib/mysql mysql
+
+Storages Drivers:
+--> AUFS
+--> ZFS
+--> BTRFS
+--> Device Mapper
+--> Overlay
+--> Overlay2
+----------
+Docker Volumes:
+--> Local
+--> Azure File Storage
+--> Convoy
+--> DigitalOcean Block Storage
+--> Flocker
+--> gce-docker
+--> GlusterFS
+--> NetApp
+--> RexRay
+--> PortWorx
+--> VMware vSphere Storage
+
+Volume Drivers:
+--> docker run -iy \ 
+    --name mysql
+    --volume-driver rexray/ebs
+    --mount src=ebs-vol,target=/var/lib/mysql
+    mysql
+----
+container Storage Interface:
+--> rkt
+--> cri-o
+
+--> should call to provision a new volume
+--> should call to delte a volume
+--> should call to place a workload that uses the voulme a node.
+
+--> Should provision a new volume on the storage
+--> should decommission a volume 
+--> should make the volume available on a node.
+
+---------------------------
+Volumes & Mounts:
+
+apiVersion: v1
+kind: pod
+metadata:
+  name: random-number-generator
+spec:
+  container:
+  - image: alpine
+    name: alpine
+    command: ["/bin/sh","-c"]
+    args: ["shuf -i 0-100 -n 1 >> /opt/number.out;"]
+    volumeMounts:
+    - mountPath: /opt
+      name: data-volume
+
+  volumes:
+  - name: data-volume
+    hostPath:
+        path: /data
+        type: Directory
+------
+Persistent Volumes:
+
+pv-definition.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+   name: pv-voll
+spec:
+  accessModes:
+      - ReadWriteOnce
+  capacity:
+      storage: 1Gi
+  hostPath:
+     path: /tmp/data
+
+--> kubectl create -f pv-defintion.yaml
+--> kubectl get persistentvolume
+
+------
+persistent volume Claims:
+
+pvc-definition.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim
+spec:
+  accessModes:
+     - ReadWriteOnce
+  resources:
+     requests:
+        storage: 500Mi
+
+--> kubectl create -f pvc-definition.yaml
+--> kubectl get persistentvolumeclaim
+
+pv-definition:
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-voll
+spec: 
+  accessModes:
+      - ReadWriteOnce
+  capacity:
+      storage: 1Gi
+  awsElasticBlockStore:
+    VolumeID: <volume-id>
+    fsType: ext4
+--> kubectl get persistentvolumeclaim
+
+Delete PVCs:
+--> kubectl delete persistentvolumeclaim myclaim
+-----------------------
+Using PVCs in PODs:
+
+Once you create a PVC use it in a POD definition file by specifying the PVC Claim name under persistentVolumeClaim.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  containers:
+    - name: myfrontend
+      image: nginx
+      volumeMounts:
+      - mountPath: "/var/www/html"
+        name: mypd
+  volumes:
+    - name: mypd
+      persistentVolumeClaim:
+        claimName: myclaim
+
+---------------------
+Solution: persistent volumes and persistent volumes claims:
+
+-> kubectl get pods
+-> kubectl exec webapp -- cat /log/app.log
+-> kubectl describe pod
+
+--> kubectl get pod webapp -o yaml > pod.yaml
+--> kubectl get pod,pvc,pv
+---
+Storage Class:
+
+apiVersion: storage.k8s.io/v1
+kind: Storageclass
+metadata:
+   name: google-storage
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-standard
+  replication-type: none
+
