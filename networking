@@ -373,9 +373,16 @@ spec:
         path: /something(/|$)(.*)
 
  -- ----------------------------------------------------
- 
-  
-
+ --> kubectl create ns ingress-space
+--> kubectl create cm nginx-configuration -n ingress-space
+--> kubectl create sa ingress-serviceaccount -n ingress-space
+--> kubectl -n ingress get roles
+--> kubectl apply -f ingress-controller.yaml
+--> kubectl -n ingress-space expose deployment ingress-controller --name ingress --port 80 --target-port 80 --type NodePort --dry-run=client -o yaml > ingress-svc.yaml
+--> kubcetl apply -f ingress-svc.yaml
+--> kubectl -n ingress-space-svc.yaml
+--> kubectl -n ingress-space get svc
+--> kubectl -n app-space describe ingress test-ingress
 
 
 
