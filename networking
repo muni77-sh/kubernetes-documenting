@@ -383,10 +383,24 @@ spec:
 --> kubectl -n ingress-space-svc.yaml
 --> kubectl -n ingress-space get svc
 --> kubectl -n app-space describe ingress test-ingress
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Design and Install a kubernetes Cluster:
+--> Hosting Production Applications:
+-> High Availability Multi node cluster with multiple master nodes
+-> kubeadm or GCP or Kops on aws or other supported paltform
+-> upto 500 nodes
+-> upto 150,000 pods in the cluster
+-> upto 300,000 total containers
+-> upto 100 Pods per node
 
+---
+turnkey Solutions:
+1. openShift
+2. Cloud foundry container Runtime 
+3. Vmware Cloud PKS
+4. Vagrant
 
-
-
+ETCD in HighAvailability:
 
 
 
